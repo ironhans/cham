@@ -6,7 +6,7 @@ BIN_DIR := bin
 OUT_DIR := output
 TEST_DIR := tests
 
-EXE := $(BIN_DIR)/main
+EXE := $(BIN_DIR)/cham
 SRC := $(shell find src -name '*.c')
 OBJ := $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
