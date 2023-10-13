@@ -1,90 +1,11 @@
-#include <argp.h>
-#include <stdbool.h>
-#include <stdio.h>
+#include <libgen.h>
+#include <stdint.h>
 #include <stdlib.h>
-#include <string.h>
 
-#include "cham_palettes.h"
+#include "arg_parser.h"
+#include "cham_color_proc.h"
 #include "cham_palettes_predefined.h"
 #include "gifenc/gifenc.h"
-#include "stb_image.h"
-
-#define MAX_FILENAME_LEN 256
-
-// TODO: Move this to the dithering handler header file or whatever
-typedef enum {
-	FLOYD_STEINBERG,
-	PLACEHOLDER,
-} DitherAlgorithm;
-
-// Argp setup
-const char *argp_program_version = "cham 0.1.0";
-static char doc[] = "cham -- a dithering and image editting tool";
-
-/* A description of the arguments we accept. */
-static char args_doc[] = "<input file> -o <output file";
-
-/* The options we understand. */
-static struct argp_option options[] = {
-	{"output", 'o', "OUTPUT", 0, "Output to OUTPUT instead of cham_INPUT", 0},
-
-	{"bit-depth", 'b', "BIT DEPTH", 0,
-	 "The bit color depth of the output, if not used default value 4", 1},
-
-	{"dither", 'd', "DITHER", OPTION_ARG_OPTIONAL,
-	 "The chosen dithering algorithm, default FLOYD_STEINBERG", 1},
-
-	{"transparency", 't', "TRANSPARENCY", 0, "Retain transparency", 1},
-	{0}};
-
-struct arguments {
-	char input_file[MAX_FILENAME_LEN];
-	char output_file[MAX_FILENAME_LEN];
-	unsigned int depth;
-	bool retain_transparency;
-	DitherAlgorithm dither_algo;
-};
-
-static error_t parse_opt(int key, char *arg, struct argp_state *state)
-{
-	/* Get the input argument from argp_parse, which we
-	   know is a pointer to our arguments structure. */
-	struct arguments *args = state->input;
-	printf("KEY %c\n", key);
-
-	switch (key) {
-		case 'b':
-			args->depth = strtol(arg, NULL, 10);
-			break;
-
-		case 'd':
-			// strncpy(args->output_file, arg, MAX_FILENAME_LEN);
-			break;
-
-		case 'o':
-			strncpy(args->output_file, arg, MAX_FILENAME_LEN);
-			break;
-
-		case ARGP_KEY_ARG:
-			if (state->arg_num == 0) {
-				strncpy(args->input_file, arg, MAX_FILENAME_LEN);
-			}
-			// if (state->arg_num > 1) {
-			// 	argp_usage(state);
-			// }
-			break;
-		case ARGP_KEY_END:
-			printf("KEY END\n");
-			if (state->arg_num < 1) {
-				argp_usage(state);
-			}
-			break;
-
-		default:
-			return ARGP_ERR_UNKNOWN;
-	}
-	return 0;
-}
 
 static struct argp argp = {options, parse_opt, args_doc, doc, 0, 0, 0};
 
@@ -95,52 +16,59 @@ int main(int argc, char *argv[])
 	/* Default values. */
 	args.depth = 4;
 	args.retain_transparency = false;
-	args.dither_algo = FLOYD_STEINBERG;
+	args.dither_algo = -1;
 	args.output_file[0] = 0;
 
 	argp_parse(&argp, argc, argv, 0, 0, &args);
-	if (!args.output_file[0]) {
-		strncpy(args.output_file, "cham_", MAX_FILENAME_LEN);
-		strncat(args.output_file, args.input_file, 5);
+	if (!args.output_file[0] ||
+		args.output_file[strlen(args.output_file) - 1] == '/') {
+		strncat(args.output_file, args.input_file,
+				MAX_FILENAME_LEN - strlen(args.output_file));
+		dirname(args.output_file);
+		strncat(args.output_file, "/cham_", 7);
+		strncat(args.output_file, basename(args.input_file),
+				MAX_FILENAME_LEN - strlen(args.output_file));
+		char *ext = strrchr(args.output_file, '.');
+		strncpy(ext, ".gif", 5);
 	}
 	printf("%d\n", argc);
 	printf("input name %s\n", args.input_file);
 	printf("bit depth %d\n", args.depth);
+	printf("dither_algo %d\n", args.dither_algo);
 	printf("output name %s\n", args.output_file);
 	return EXIT_SUCCESS;
 
-	// if (retain_transparency) {
-	// 	return EXIT_SUCCESS;
-	// }
-	// int width;
-	// int height;
-	// int channels;
-	// unsigned char *img =
-	// 	stbi_load(input_filename, &width, &height, &channels, STBI_rgb);
-	// if (img == NULL) {
-	// 	fprintf(stderr, "Unabled to read %s\n", input_filename);
-	// 	return EXIT_FAILURE;
-	// }
-	// int count = 0;
-	// Color *pixels_l = malloc(sizeof(*pixels_l) * width * height);
-	// for (int i = 0; i < width * height * STBI_rgb; i += 3) {
-	// 	pixels_l[count].r = img[i];
-	// 	pixels_l[count].g = img[i + 1];
-	// 	pixels_l[count].b = img[i + 2];
-	// 	count++;
-	// }
-	// for (int i = 0; i < width * height; i++) {
-	// 	// printf("%d, %d, %d\n", pixels_l[i].r, pixels_l[i].g, pixels_l[i].b);
-	// }
-	// printf("%d x %d x %d\n", width, height, channels);
-	// printf("%d\n", count);
+	if (args.retain_transparency) {
+		// TODO: Allow transparency
+		return EXIT_SUCCESS;
+	}
 
-	// ge_GIF *gif_handler =
-	// 	ge_new_gif("output/test.gif", 4, 7, DEFAULT_256_PALETTE, 2, -1, -1);
-	// uint8_t pixels[] = {2, 2, 2, 2, 2, 0, 0, 0, 2, 0, 0, 0, 2, 2,
-	// 					2, 0, 2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0};
-	// memcpy(gif_handler->frame, pixels, sizeof(pixels));
-	// ge_add_frame(gif_handler, 0);
-	// ge_close_gif(gif_handler);
+	int width;
+	int height;
+	int channels;
+	unsigned char *img =
+		stbi_load(args.input_file, &width, &height, &channels, STBI_rgb);
+	if (img == NULL) {
+		fprintf(stderr, "Unabled to read %s\n", args.input_file);
+		return EXIT_FAILURE;
+	}
+	printf("%d x %d x %d\n", width, height, channels);
 	// return EXIT_SUCCESS;
+	Palette chosen = DEFAULT_2;
+
+	ge_GIF *gif_handler =
+		ge_new_gif(args.output_file, width, height, chosen.palette,
+				   (int)ceil(log2(chosen.size)), -1, -1);
+	uint8_t *pixels =
+		cham_create_given_palette(chosen, img, width, height, STBI_rgb);
+	// for (int i = 0; i < height; i += 1) {
+	// 	for (int j = 0; j < width; j += 1) {
+	// 		printf("%3d ", pixels[i + j]);
+	// 	}
+	// 	printf("\n");
+	// }
+	memcpy(gif_handler->frame, pixels, sizeof(*pixels) * width * height);
+	ge_add_frame(gif_handler, 0);
+	ge_close_gif(gif_handler);
+	return EXIT_SUCCESS;
 }
