@@ -1,20 +1,20 @@
-#include <stdint.h>
-#include "cham_palettes_predefined.h"
 #ifndef CHAM_COLOR_PROC
 #define CHAM_COLOR_PROC
+#include <stdint.h>
+
+#include "cham_palettes_predefined.h"
 
 #define UNUSED(param) ((void)((param)))
 #define GET_X(index, channels, width) ((index / channels) % width)
 #define GET_Y(index, channels, width) ((index / channels) / width)
-#define GET_IND(x, y, channels, width) \
-	(channels * ((y) * width + (x)))
-#define PLUS_TRUNCATE_UCHAR(a, b) \
-    if (((int)(a)) + (b) < 0) \
-        (a) = 0; \
-    else if (((int)(a)) + (b) > 255) \
-        (a) = 255; \
-    else \
-        (a) += (b);
+#define GET_IND(x, y, channels, width) (channels * ((y)*width + (x)))
+#define PLUS_TRUNCATE_UCHAR(a, b)    \
+	if (((int)(a)) + (b) < 0)        \
+		(a) = 0;                     \
+	else if (((int)(a)) + (b) > 255) \
+		(a) = 255;                   \
+	else                             \
+		(a) += (b);
 
 typedef enum {
 	NONE,
@@ -38,8 +38,6 @@ double sq_distance_between_colors(Color x, Color y);
 double distance_between_colors(Color x, Color y);
 double sq_distance_between_colors_a(ColorAlpha x, ColorAlpha y);
 double distance_between_colors_a(ColorAlpha x, ColorAlpha y);
-
-Color build_kdtree(uint8_t *pal, int depth, Color *kdtree, int size, int ind);
 
 int find_closest_color(Color original, Palette p);
 Color quant_error(Color old_color, Color new_color);
