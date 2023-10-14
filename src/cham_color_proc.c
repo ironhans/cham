@@ -1,27 +1,119 @@
 #include "cham_color_proc.h"
 
-double sq_distance_between_colors(Color x, Color y)
-{
-	return (pow((y.r - x.r), 2)) + (pow((y.g - x.g), 2)) +
-		   (pow((y.b - x.b), 2));
-}
+#include <limits.h>
+#include <math.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "cham_palettes_predefined.h"
+#include "stb_image.h"
 
 double distance_between_colors(Color x, Color y)
 {
-	return sqrt((pow((y.r - x.r), 2)) + (pow((y.g - x.g), 2)) +
-				(pow((y.b - x.b), 2)));
+	int r_diff = y.r - x.r;
+	int g_diff = y.g - x.g;
+	int b_diff = y.b - x.b;
+	return ((r_diff * r_diff) + (g_diff * g_diff) + (b_diff * b_diff));
 }
 
-double sq_distance_between_colors_a(ColorAlpha x, ColorAlpha y)
+double sq_distance_between_colors(Color x, Color y)
 {
-	return (pow((y.r - x.r), 2)) + (pow((y.g - x.g), 2)) +
-		   (pow((y.b - x.b), 2));
+	return sqrt((pow((y.r - x.r), 2)) + (pow((y.g - x.g), 2)) +
+				(pow((y.b - x.b), 2)));
 }
 
 double distance_between_colors_a(ColorAlpha x, ColorAlpha y)
 {
+	return (pow((y.r - x.r), 2)) + (pow((y.g - x.g), 2)) +
+		   (pow((y.b - x.b), 2));
+}
+
+double sq_distance_between_colors_a(ColorAlpha x, ColorAlpha y)
+{
 	return sqrt((pow((y.r - x.r), 2)) + (pow((y.g - x.g), 2)) +
 				(pow((y.b - x.b), 2)));
+}
+
+static int cmp_r(const void *a, const void *b)
+{
+	return (((int)*(uint8_t *)a) - ((int)*(uint8_t *)b));
+}
+static int cmp_g(const void *a, const void *b)
+{
+	int x = (int)*(((uint8_t *)a) + 1);
+	int y = (int)*(((uint8_t *)b) + 1);
+	return x - y;
+}
+static int cmp_b(const void *a, const void *b)
+{
+	int x = (int)*(((uint8_t *)a) + 2);
+	int y = (int)*(((uint8_t *)b) + 2);
+	return x - y;
+}
+
+Color build_kdtree(uint8_t *pal, int depth, Color *kdtree, int size, int ind)
+{
+	// printf("ENTER %d\n", depth);
+	// printf("CURR IND %d\n", curr_ind);
+	// printf("SIZE %d\n", size);
+	int axis = depth % 3;
+	if (size <= 1) {
+		Color c;
+		c.r = *pal;
+		c.g = *(pal + 1);
+		c.b = *(pal + 2);
+		// printf("MEDIAN COLOR: 0x%02x 0x%02x 0x%02x\n", c.r, c.g, c.b);
+		// printf("0/1 CASE\n\n");
+		return c;
+	}
+	// if (size != 256) {
+	// printf("Before sorting by %d\n", axis);
+	// for (int i = 0; i < size * 3; i += 3) {
+	// 	printf("0x%x 0x%x 0x%x\n", palette[i], palette[i + 1], palette[i + 2]);
+	// }
+	// }
+	switch (axis) {
+		case 0:
+			qsort(pal, size, (sizeof(*pal) * 3), cmp_r);
+			break;
+		case 1:
+			qsort(pal, size, (sizeof(*pal) * 3), cmp_g);
+			break;
+		case 2:
+			qsort(pal, size, (sizeof(*pal) * 3), cmp_b);
+			break;
+	}
+	// printf("After sorting by %d\n", axis);
+	// for (int i = 0; i < size * 3; i += 3) {
+	// 	printf("0x%02x 0x%02x 0x%02x\n", palette[i], palette[i + 1], palette[i +
+	// 2]);
+	// }
+	Color median;
+	int mid = 3 * (size / 2);
+	median.r = pal[mid];
+	median.g = pal[mid + 1];
+	median.b = pal[mid + 2];
+	// printf("MEDIAN COLOR: 0x%02x 0x%02x 0x%02x\n", median.r, median.g,
+	// 	   median.b);
+	// printf("MEDIAN IND %d\n\n", mid);
+	kdtree[ind] = median;
+	int left_size = (mid / 3);
+	int right_size = size - (mid / 3) - 1;
+	if (left_size >= 1) {
+		kdtree[2 * ind + 1] =
+			build_kdtree(pal, depth + 1, kdtree, left_size, 2 * ind + 1);
+	}
+	if (right_size >= 1) {
+		kdtree[2 * ind + 2] = build_kdtree(pal + mid + 3, depth + 1, kdtree,
+										   right_size, 2 * ind + 2);
+	}
+	// construct_kdtree(palette, depth + 1, kdtree, left_size, 2 * curr_ind +
+	// 1); construct_kdtree(palette + median_ind + 3, depth + 1, kdtree,
+	// right_size, 				 2 * curr_ind + 2);
+	return median;
 }
 
 int find_closest_color(Color original, Palette p)
@@ -38,7 +130,7 @@ int find_closest_color(Color original, Palette p)
 			min = curr;
 			index = i / 3;
 			if (curr == 0) {
-				break;
+				return index;
 			}
 		}
 	}
@@ -48,55 +140,17 @@ int find_closest_color(Color original, Palette p)
 Color quant_error(Color old_color, Color new_color)
 {
 	Color t;
-	t.r = (old_color.r - (int)new_color.r);
-	t.g = (old_color.g - (int)new_color.g);
-	t.b = (old_color.b - (int)new_color.b);
+	t.r = (old_color.r - new_color.r);
+	t.g = (old_color.g - new_color.g);
+	t.b = (old_color.b - new_color.b);
 	return t;
 }
 
 void set_color_error(unsigned char *img, int index, double weight, Color err)
 {
-	// int r_sum = img[index] + weight * err.r;
-	// int g_sum = img[index + 1] + weight * err.g;
-	// int b_sum = img[index + 2] + weight * err.b;
 	PLUS_TRUNCATE_UCHAR(img[index], weight * err.r);
 	PLUS_TRUNCATE_UCHAR(img[index + 1], weight * err.g);
 	PLUS_TRUNCATE_UCHAR(img[index + 2], weight * err.b);
-}
-
-Color get_color_error(unsigned char *img, int index, double weight, Color err)
-{
-	// int r_sum = img[index] + weight * err.r;
-	// int g_sum = img[index + 1] + weight * err.g;
-	// int b_sum = img[index + 2] + weight * err.b;
-	// PLUS_TRUNCATE_UCHAR(img[index], weight * err.r);
-	// PLUS_TRUNCATE_UCHAR(img[index + 1], weight * err.g);
-	// PLUS_TRUNCATE_UCHAR(img[index + 2], weight * err.b);
-	Color t;
-	t.r = (img[index] + weight * err.r);
-	t.g = (img[index + 1] + weight * err.g);
-	t.b = (img[index + 2] + weight * err.b);
-	// printf("sums: %d, %d, %d\n", r_sum, g_sum, b_sum);
-	// printf("real sums: %d, %d, %d\n\n", img[index], img[index + 1], img[index + 2]);
-	return t;
-}
-
-void set_pixel_color(unsigned char *img, int index, Color c)
-{
-	if (c.r > 255) c.r = 255;
-	if (c.r < 0) c.r = 0;
-	if (c.g > 255) c.g = 255;
-	if (c.g < 0) c.g = 0;
-	if (c.b > 255) c.b = 255;
-	if (c.b < 0) c.b = 0;
-	img[index] = c.r;
-	img[index + 1] = c.g;
-	img[index + 2] = c.b;
-	// int r_sum = img[index] + weight * err.r;
-	// int g_sum = img[index + 1] + weight * err.g;
-	// int b_sum = img[index + 2] + weight * err.b;
-	// printf("sums: %d, %d, %d\n", r_sum, g_sum, b_sum);
-	// printf("real sums: %d, %d, %d\n\n", img[index], img[index + 1], img[index + 2]);
 }
 
 uint8_t *cham_create_given_palette(Palette pal, unsigned char *img, int width,
@@ -105,6 +159,14 @@ uint8_t *cham_create_given_palette(Palette pal, unsigned char *img, int width,
 	if (channels == 4) {
 		return NULL;
 	}
+	Color *kdtree = malloc(sizeof(*kdtree) * pal.size);
+	build_kdtree(pal.palette, 0, kdtree, pal.size, 0);
+	// printf("START\n");
+	// for (int i = 0; i < pal.size; i++) {
+	// 	printf("0x%02x, 0x%02x, 0x%02x\n", kdtree[i].r, kdtree[i].g,
+	// 		   kdtree[i].b);
+	// }
+	// printf("STOP\n");
 	uint8_t *pixels = malloc(sizeof(*pixels) * width * height);
 	// TODO: Optimize this, it runs poorly
 	// TREE Structure needed
@@ -114,11 +176,6 @@ uint8_t *cham_create_given_palette(Palette pal, unsigned char *img, int width,
 		c.g = img[i + 1];
 		c.b = img[i + 2];
 		pixels[i / channels] = find_closest_color(c, pal);
-		// printf("\nInd %d\n", i );
-		// int x = GET_X(i, channels, width);
-		// int y = GET_Y(i, channels, width);
-		// printf("%d, %d\n", x, y);
-		// printf("Cal %d\n", GET_IND(x, y, channels, width));
 	}
 	return pixels;
 }
@@ -153,23 +210,19 @@ uint8_t *cham_create_given_palette_d(Palette pal, unsigned char *img, int width,
 			int x = GET_X(i, channels, width);
 			int y = GET_Y(i, channels, width);
 			if (x + 1 < width) {
-				Color res = get_color_error(img, GET_IND(x + 1, y, channels, width), w1,
+				set_color_error(img, GET_IND(x + 1, y, channels, width), w1,
 								quant_err);
-				set_pixel_color(img, GET_IND(x + 1, y, channels, width), res);
 			}
 			if (y + 1 < height) {
-				Color res = get_color_error(img, GET_IND(x, y + 1, channels, width), w2,
+				set_color_error(img, GET_IND(x, y + 1, channels, width), w2,
 								quant_err);
-				set_pixel_color(img, GET_IND(x, y + 1, channels, width), res);
 				if (x > 0) {
-					Color res = get_color_error(img, GET_IND(x - 1, y + 1, channels, width),
+					set_color_error(img, GET_IND(x - 1, y + 1, channels, width),
 									w3, quant_err);
-					set_pixel_color(img, GET_IND(x - 1, y + 1, channels, width), res);
 				}
 				if (x + 1 < width) {
-					Color res = get_color_error(img, GET_IND(x + 1, y + 1, channels, width),
+					set_color_error(img, GET_IND(x + 1, y + 1, channels, width),
 									w4, quant_err);
-					set_pixel_color(img, GET_IND(x + 1, y + 1, channels, width), res);
 				}
 			}
 		}

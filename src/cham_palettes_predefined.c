@@ -6,8 +6,14 @@
 // BW palette
 Palette BW = {2, bw_palette};
 uint8_t bw_palette[] = {
-    0x000, 0x000, 0x000,
+    0x00, 0x00, 0x00,
     0xFF, 0xFF, 0xFF,
+};
+
+Palette BLUE_MONO = {2, blue_mono_palette};
+uint8_t blue_mono_palette[] = {
+	0xDC, 0xF9, 0xFF,
+	0x05, 0x38, 0x3e,
 };
 
 // 16 slots left used for intermediary greys

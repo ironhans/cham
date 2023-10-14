@@ -1,7 +1,8 @@
 #include <argp.h>
+#include <ctype.h>
 #include <stdbool.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "cham_color_proc.h"
 
@@ -22,8 +23,14 @@ char args_doc[] = "<input file> -o <output file";
 struct argp_option options[] = {
 	{"output", 'o', "OUTPUT", 0, "Output to OUTPUT instead of cham_INPUT", 0},
 
+	{"color-palette", 'p', "COLOR-PALETTE", 0,
+	 "If given, will use predef color palette instead of generated one", 1},
+	// TODO: Add option for user input palette, array of hexes?
+
 	{"bit-depth", 'b', "BIT-DEPTH", 0,
-	 "The bit color depth of the output, if not used default value 4", 1},
+	 "The bit color depth of the generated palette, if not used default value "
+	 "3",
+	 1},
 
 	{"dither", 'd', "DITHER", OPTION_ARG_OPTIONAL,
 	 "The chosen dithering algorithm, default floyd. Avaliable: floyd.", 1},
@@ -37,6 +44,7 @@ struct arguments {
 	uint depth;
 	bool retain_transparency;
 	DitherAlgorithm dither_algo;
+	Palette palette;
 };
 
 error_t parse_opt(int key, char *arg, struct argp_state *state)
@@ -46,15 +54,33 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 	struct arguments *args = state->input;
 
 	switch (key) {
+		case 'p':
+			for (int i = 0; arg[i]; i++) {
+				arg[i] = tolower(arg[i]);
+			}
+			if (strcmp("six_eight_five", arg) == 0 || strcmp("256", arg) == 0) {
+				args->palette = SIX_EIGHT_FIVE;
+			} else if (strcmp("bw", arg) == 0) {
+				args->palette = BW;
+			} else if (strcmp("blue_mono", arg) == 0) {
+				args->palette = BLUE_MONO;
+			} else {
+				argp_error(state,
+						   "Unknown value %s for color palette.\n"
+						   "Valid palettes are bw, 256, blue_mono.",
+						   arg);
+				argp_usage(state);
+			}
+			break;
+
 		case 'b':
 			args->depth = strtol(arg, NULL, 10);
 			break;
 
 		case 'd':
-			if (arg == NULL || strcmp("floyd", arg) == 0) {
+			if (arg == NULL || strcmp("floyd", arg) == 0 ||
+				strcmp("floydsteinberg", arg) == 0) {
 				args->dither_algo = FLOYD_STEINBERG;
-			} else if (strcmp("placeholder", arg) == 0) {
-				args->dither_algo = PLACEHOLDER;
 			} else {
 				argp_error(state,
 						   "Unknown value %s for dithering algorithm.\n"

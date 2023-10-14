@@ -1,13 +1,7 @@
+#include <stdint.h>
+#include "cham_palettes_predefined.h"
 #ifndef CHAM_COLOR_PROC
 #define CHAM_COLOR_PROC
-#include <limits.h>
-#include <math.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdlib.h>
-
-#include "cham_palettes_predefined.h"
-#include "stb_image.h"
 
 #define UNUSED(param) ((void)((param)))
 #define GET_X(index, channels, width) ((index / channels) % width)
@@ -23,8 +17,8 @@
         (a) += (b);
 
 typedef enum {
+	NONE,
 	FLOYD_STEINBERG,
-	PLACEHOLDER,
 } DitherAlgorithm;
 
 typedef struct {
@@ -44,6 +38,8 @@ double sq_distance_between_colors(Color x, Color y);
 double distance_between_colors(Color x, Color y);
 double sq_distance_between_colors_a(ColorAlpha x, ColorAlpha y);
 double distance_between_colors_a(ColorAlpha x, ColorAlpha y);
+
+Color build_kdtree(uint8_t *pal, int depth, Color *kdtree, int size, int ind);
 
 int find_closest_color(Color original, Palette p);
 Color quant_error(Color old_color, Color new_color);

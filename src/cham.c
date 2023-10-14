@@ -1,11 +1,14 @@
 #include <libgen.h>
+#include <math.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "arg_parser.h"
 #include "cham_color_proc.h"
 #include "cham_palettes_predefined.h"
 #include "gifenc/gifenc.h"
+#include "stb_image.h"
 
 static struct argp argp = {options, parse_opt, args_doc, doc, 0, 0, 0};
 
@@ -14,10 +17,11 @@ int main(int argc, char *argv[])
 	struct arguments args;
 
 	/* Default values. */
-	args.depth = 4;
+	args.depth = 3;
 	args.retain_transparency = false;
-	args.dither_algo = -1;
+	args.dither_algo = NONE;
 	args.output_file[0] = 0;
+	args.palette = SIX_EIGHT_FIVE;	// TODO: Change to be CUSTOM
 
 	argp_parse(&argp, argc, argv, 0, 0, &args);
 	if (!args.output_file[0] ||
@@ -53,21 +57,19 @@ int main(int argc, char *argv[])
 	}
 	printf("%d x %d x %d\n", width, height, channels);
 	// return EXIT_SUCCESS;
-	Palette chosen = DEFAULT_2;
 
 	ge_GIF *gif_handler =
-		ge_new_gif(args.output_file, width, height, chosen.palette,
-				   (int)ceil(log2(chosen.size)), -1, -1);
-	uint8_t *pixels =
-		cham_create_given_palette_d(chosen, img, width, height, STBI_rgb, FLOYD_STEINBERG);
-	// uint8_t *pixels =
-	// 	cham_create_given_palette(chosen, img, width, height, STBI_rgb);
-	// for (int i = 0; i < height; i += 1) {
-	// 	for (int j = 0; j < width; j += 1) {
-	// 		printf("%3d ", pixels[i + j]);
-	// 	}
-	// 	printf("\n");
-	// }
+		ge_new_gif(args.output_file, width, height, args.palette.palette,
+				   (int)ceil(log2(args.palette.size)), -1, -1);
+	uint8_t *pixels;
+	// User given palettes
+	if (args.dither_algo > 0) {
+		pixels = cham_create_given_palette_d(args.palette, img, width, height,
+											 STBI_rgb, args.dither_algo);
+	} else {
+		pixels = cham_create_given_palette(args.palette, img, width, height,
+										   STBI_rgb);
+	}
 	memcpy(gif_handler->frame, pixels, sizeof(*pixels) * width * height);
 	ge_add_frame(gif_handler, 0);
 	ge_close_gif(gif_handler);
