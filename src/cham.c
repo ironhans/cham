@@ -36,7 +36,6 @@ int main(int argc, char *argv[])
 	printf("bit depth %d\n", args.depth);
 	printf("dither_algo %d\n", args.dither_algo);
 	printf("output name %s\n", args.output_file);
-	return EXIT_SUCCESS;
 
 	if (args.retain_transparency) {
 		// TODO: Allow transparency
@@ -60,7 +59,9 @@ int main(int argc, char *argv[])
 		ge_new_gif(args.output_file, width, height, chosen.palette,
 				   (int)ceil(log2(chosen.size)), -1, -1);
 	uint8_t *pixels =
-		cham_create_given_palette(chosen, img, width, height, STBI_rgb);
+		cham_create_given_palette_d(chosen, img, width, height, STBI_rgb, FLOYD_STEINBERG);
+	// uint8_t *pixels =
+	// 	cham_create_given_palette(chosen, img, width, height, STBI_rgb);
 	// for (int i = 0; i < height; i += 1) {
 	// 	for (int j = 0; j < width; j += 1) {
 	// 		printf("%3d ", pixels[i + j]);
