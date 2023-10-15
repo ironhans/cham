@@ -21,19 +21,6 @@ typedef enum {
 	FLOYD_STEINBERG,
 } DitherAlgorithm;
 
-typedef struct {
-	int r;
-	int g;
-	int b;
-} Color;
-
-typedef struct {
-	int r;
-	int g;
-	int b;
-	int a;
-} ColorAlpha;
-
 double sq_distance_between_colors(Color x, Color y);
 double distance_between_colors(Color x, Color y);
 double sq_distance_between_colors_a(ColorAlpha x, ColorAlpha y);
