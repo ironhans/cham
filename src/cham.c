@@ -58,9 +58,16 @@ int main(int argc, char *argv[])
 	printf("%d x %d x %d\n", width, height, channels);
 	// return EXIT_SUCCESS;
 
-	ge_GIF *gif_handler =
+	ge_GIF *gif_handler;
+	if (args.palette.kdtree) {
+	gif_handler =
+		ge_new_gif(args.output_file, width, height, args.palette.kdtree,
+				   (int)ceil(log2(args.palette.size)), -1, -1);
+	} else {
+	gif_handler =
 		ge_new_gif(args.output_file, width, height, args.palette.palette,
 				   (int)ceil(log2(args.palette.size)), -1, -1);
+	}
 	uint8_t *pixels;
 	// User given palettes
 	if (args.dither_algo > 0) {

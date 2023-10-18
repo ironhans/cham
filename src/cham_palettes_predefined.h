@@ -22,7 +22,7 @@ typedef struct {
 typedef struct {
 	int size;
 	uint8_t *palette;
-	Color *kdtree;
+	uint8_t *kdtree;
 } Palette;
 
 
@@ -36,7 +36,7 @@ extern Palette BLUE_MONO;
 
 // 16 intermediary greys
 extern uint8_t six_eight_five_palette[];
-// extern Color six_eight_five_ktree[];
+extern uint8_t six_eight_five_ktree[];
 extern Palette SIX_EIGHT_FIVE;
 
 

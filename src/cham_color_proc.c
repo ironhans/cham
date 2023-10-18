@@ -12,7 +12,7 @@
 #include "kdtree.h"
 #include "stb_image.h"
 
-double distance_between_colors(Color x, Color y)
+inline double distance_between_colors(Color x, Color y)
 {
 	int r_diff = y.r - x.r;
 	int g_diff = y.g - x.g;
@@ -20,7 +20,7 @@ double distance_between_colors(Color x, Color y)
 	return ((r_diff * r_diff) + (g_diff * g_diff) + (b_diff * b_diff));
 }
 
-double sq_distance_between_colors(Color x, Color y)
+inline double sq_distance_between_colors(Color x, Color y)
 {
 	int r_diff = y.r - x.r;
 	int g_diff = y.g - x.g;
@@ -28,13 +28,13 @@ double sq_distance_between_colors(Color x, Color y)
 	return sqrt((r_diff * r_diff) + (g_diff * g_diff) + (b_diff * b_diff));
 }
 
-double distance_between_colors_a(ColorAlpha x, ColorAlpha y)
+inline double distance_between_colors_a(ColorAlpha x, ColorAlpha y)
 {
 	return (pow((y.r - x.r), 2)) + (pow((y.g - x.g), 2)) +
 		   (pow((y.b - x.b), 2));
 }
 
-double sq_distance_between_colors_a(ColorAlpha x, ColorAlpha y)
+inline double sq_distance_between_colors_a(ColorAlpha x, ColorAlpha y)
 {
 	return sqrt((pow((y.r - x.r), 2)) + (pow((y.g - x.g), 2)) +
 				(pow((y.b - x.b), 2)));
@@ -52,7 +52,7 @@ int find_closest_color(Color original, Palette p)
 		double curr = distance_between_colors(original, c);
 		if (curr < min) {
 			min = curr;
-			index = i / 3;
+			index = i;
 			if (curr == 0) {
 				return index;
 			}
@@ -61,7 +61,7 @@ int find_closest_color(Color original, Palette p)
 	return index;
 }
 
-Color quant_error(Color old_color, Color new_color)
+inline Color quant_error(Color old_color, Color new_color)
 {
 	Color t;
 	t.r = (old_color.r - new_color.r);
@@ -70,7 +70,7 @@ Color quant_error(Color old_color, Color new_color)
 	return t;
 }
 
-void set_color_error(unsigned char *img, int index, double weight, Color err)
+inline void set_color_error(unsigned char *img, int index, double weight, Color err)
 {
 	PLUS_TRUNCATE_UCHAR(img[index], weight * err.r);
 	PLUS_TRUNCATE_UCHAR(img[index + 1], weight * err.g);
@@ -83,12 +83,12 @@ uint8_t *cham_create_given_palette(Palette pal, unsigned char *img, int width,
 	if (channels == 4) {
 		return NULL;
 	}
-	Color *kdtree = malloc(sizeof(*kdtree) * pal.size);
-	build_kdtree(pal.palette, 0, kdtree, pal.size, 0);
+	// uint8_t *kdtree = malloc(sizeof(*kdtree) * pal.size * channels);
+	// build_kdtree(pal.palette, 0, kdtree, pal.size, 0);
 	// printf("START\n");
-	// for (int i = 0; i < pal.size; i++) {
-	// 	printf("{0x%02x, 0x%02x, 0x%02x},\n", kdtree[i].r, kdtree[i].g,
-	// 		   kdtree[i].b);
+	// for (int i = 0; i < pal.size * 3; i += 3) {
+	// 	printf("0x%02x, 0x%02x, 0x%02x,\n", kdtree[i], kdtree[i + 1],
+	// 		   kdtree[i + 2]);
 	// }
 	// printf("STOP\n");
 	uint8_t *pixels = malloc(sizeof(*pixels) * width * height);
@@ -96,12 +96,19 @@ uint8_t *cham_create_given_palette(Palette pal, unsigned char *img, int width,
 	// TREE Structure needed
 	int (*find_func)(Color, Palette) =
 		(pal.kdtree) ? &search_neighbor : &find_closest_color;
+	if (pal.kdtree) {
+		printf("KDTREE\n");
+	} else {
+		printf("LINEAR\n");
+	}
 	for (int i = 0; i < width * height * channels; i += channels) {
 		Color c;
 		c.r = img[i];
 		c.g = img[i + 1];
 		c.b = img[i + 2];
-		pixels[i / channels] = (*find_func)(c, pal);
+		// int index = (*find_func)(c, pal);
+		// printf("COLOR: %x\n", index);
+		pixels[i / channels] = (*find_func)(c, pal) / 3;
 	}
 	return pixels;
 }
@@ -126,9 +133,15 @@ uint8_t *cham_create_given_palette_d(Palette pal, unsigned char *img, int width,
 		int index = (*find_func)(c, pal);
 		pixels[i / channels] = index;
 		Color p;
-		p.r = pal.palette[index * 3];
-		p.g = pal.palette[index * 3 + 1];
-		p.b = pal.palette[index * 3 + 2];
+		if (pal.kdtree) {
+			p.r = pal.kdtree[index * 3];
+			p.g = pal.kdtree[index * 3 + 1];
+			p.b = pal.kdtree[index * 3 + 2];
+		} else {
+			p.r = pal.palette[index * 3];
+			p.g = pal.palette[index * 3 + 1];
+			p.b = pal.palette[index * 3 + 2];
+		}
 		Color quant_err = quant_error(c, p);
 		if (d == FLOYD_STEINBERG) {
 			double w1 = 7.0 / 16;
