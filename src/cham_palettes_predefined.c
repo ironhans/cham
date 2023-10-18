@@ -17,7 +17,7 @@ uint8_t blue_mono_palette[] = {
 };
 
 // 16 slots left used for intermediary greys
-Palette SIX_EIGHT_FIVE = {256, six_eight_five_palette, six_eight_five_ktree};
+Palette SIX_EIGHT_FIVE = {256, 0, six_eight_five_kdtree};
 // Palette SIX_EIGHT_FIVE = {256, six_eight_five_palette, 0};
 uint8_t six_eight_five_palette[] = {
     0x00, 0x00, 0x00,
@@ -277,7 +277,7 @@ uint8_t six_eight_five_palette[] = {
 	0xee, 0xee, 0xee,
 	0xfe, 0xfe, 0xfe,
 };
-uint8_t six_eight_five_ktree[] = {
+uint8_t six_eight_five_kdtree[] = {
 	0x8f, 0x8f, 0x8f,
 	0x66, 0x6d, 0xbf,
 	0x99, 0x92, 0xbf,

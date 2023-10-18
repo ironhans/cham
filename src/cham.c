@@ -9,6 +9,7 @@
 #include "cham_palettes_predefined.h"
 #include "gifenc/gifenc.h"
 #include "stb_image.h"
+#include "stb_image_resize2.h"
 
 static struct argp argp = {options, parse_opt, args_doc, doc, 0, 0, 0};
 
@@ -22,6 +23,8 @@ int main(int argc, char *argv[])
 	args.dither_algo = NONE;
 	args.output_file[0] = 0;
 	args.palette = SIX_EIGHT_FIVE;	// TODO: Change to be CUSTOM
+	args.width = 0;
+	args.height = 0;
 
 	argp_parse(&argp, argc, argv, 0, 0, &args);
 	if (!args.output_file[0] ||
@@ -40,9 +43,11 @@ int main(int argc, char *argv[])
 	printf("bit depth %d\n", args.depth);
 	printf("dither_algo %d\n", args.dither_algo);
 	printf("output name %s\n", args.output_file);
+	printf("width %d\n", args.width);
+	printf("height %d\n", args.height);
 
 	if (args.retain_transparency) {
-		// TODO: Allow transparency
+		printf("transparency is currently not supported\n");
 		return EXIT_SUCCESS;
 	}
 
@@ -57,6 +62,21 @@ int main(int argc, char *argv[])
 	}
 	printf("%d x %d x %d\n", width, height, channels);
 	// return EXIT_SUCCESS;
+	
+	if (args.width || args.height) {
+		if (args.width && !args.height){
+			double ratio = (double) args.width / width;
+			args.height = ratio * height;
+			printf("NEW %d x %d\n", args.width, args.height);
+		} else if (args.height && !args.width) {
+			double ratio = (double) args.height / height;
+			args.width = ratio * width;
+			printf("NEW %d x %d\n", args.width, args.height);
+		}
+		img = stbir_resize_uint8_srgb(img, width, height, 0, 0, args.width, args.height, 0, STBIR_RGB);
+		width = args.width;
+		height = args.height;
+	}
 
 	ge_GIF *gif_handler;
 	if (args.palette.kdtree) {
@@ -65,7 +85,7 @@ int main(int argc, char *argv[])
 				   (int)ceil(log2(args.palette.size)), -1, -1);
 	} else {
 	gif_handler =
-		ge_new_gif(args.output_file, width, height, args.palette.palette,
+		ge_new_gif(args.output_file, width, height, args.palette.color_arr,
 				   (int)ceil(log2(args.palette.size)), -1, -1);
 	}
 	uint8_t *pixels;

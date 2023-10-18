@@ -28,27 +28,15 @@ inline double sq_distance_between_colors(Color x, Color y)
 	return sqrt((r_diff * r_diff) + (g_diff * g_diff) + (b_diff * b_diff));
 }
 
-inline double distance_between_colors_a(ColorAlpha x, ColorAlpha y)
-{
-	return (pow((y.r - x.r), 2)) + (pow((y.g - x.g), 2)) +
-		   (pow((y.b - x.b), 2));
-}
-
-inline double sq_distance_between_colors_a(ColorAlpha x, ColorAlpha y)
-{
-	return sqrt((pow((y.r - x.r), 2)) + (pow((y.g - x.g), 2)) +
-				(pow((y.b - x.b), 2)));
-}
-
 int find_closest_color(Color original, Palette p)
 {
 	int index = 0;
 	double min = INT_MAX;
 	for (int i = 0; i < p.size * 3; i += 3) {
 		Color c;
-		c.r = p.palette[i];
-		c.g = p.palette[i + 1];
-		c.b = p.palette[i + 2];
+		c.r = p.color_arr[i];
+		c.g = p.color_arr[i + 1];
+		c.b = p.color_arr[i + 2];
 		double curr = distance_between_colors(original, c);
 		if (curr < min) {
 			min = curr;
@@ -84,7 +72,7 @@ uint8_t *cham_create_given_palette(Palette pal, unsigned char *img, int width,
 		return NULL;
 	}
 	// uint8_t *kdtree = malloc(sizeof(*kdtree) * pal.size * channels);
-	// build_kdtree(pal.palette, 0, kdtree, pal.size, 0);
+	// build_kdtree(pal.color_arr, 0, kdtree, pal.size, 0);
 	// printf("START\n");
 	// for (int i = 0; i < pal.size * 3; i += 3) {
 	// 	printf("0x%02x, 0x%02x, 0x%02x,\n", kdtree[i], kdtree[i + 1],
@@ -92,22 +80,18 @@ uint8_t *cham_create_given_palette(Palette pal, unsigned char *img, int width,
 	// }
 	// printf("STOP\n");
 	uint8_t *pixels = malloc(sizeof(*pixels) * width * height);
-	// TODO: Optimize this, it runs poorly
-	// TREE Structure needed
 	int (*find_func)(Color, Palette) =
 		(pal.kdtree) ? &search_neighbor : &find_closest_color;
-	if (pal.kdtree) {
-		printf("KDTREE\n");
-	} else {
-		printf("LINEAR\n");
-	}
+	// if (pal.kdtree) {
+	// 	printf("KDTREE\n");
+	// } else {
+	// 	printf("LINEAR\n");
+	// }
 	for (int i = 0; i < width * height * channels; i += channels) {
 		Color c;
 		c.r = img[i];
 		c.g = img[i + 1];
 		c.b = img[i + 2];
-		// int index = (*find_func)(c, pal);
-		// printf("COLOR: %x\n", index);
 		pixels[i / channels] = (*find_func)(c, pal) / 3;
 	}
 	return pixels;
@@ -121,28 +105,28 @@ uint8_t *cham_create_given_palette_d(Palette pal, unsigned char *img, int width,
 		return NULL;
 	}
 	uint8_t *pixels = malloc(sizeof(*pixels) * width * height);
-	// TODO: Optimize this, it runs poorly
-	// TREE Structure needed
-	int (*find_func)(Color, Palette) =
-		(pal.kdtree) ? &search_neighbor : &find_closest_color;
+	uint8_t *color_source; 
+	int (*find_func)(Color, Palette);
+	if (pal.kdtree) {
+		find_func = &search_neighbor;
+		color_source = pal.kdtree;
+	} else {
+		find_func = &find_closest_color;
+		color_source = pal.color_arr;
+	}
 	for (int i = 0; i < width * height * channels; i += channels) {
 		Color c;
 		c.r = img[i];
 		c.g = img[i + 1];
 		c.b = img[i + 2];
 		int index = (*find_func)(c, pal);
-		pixels[i / channels] = index;
+		pixels[i / channels] = index / 3;
 		Color p;
-		if (pal.kdtree) {
-			p.r = pal.kdtree[index * 3];
-			p.g = pal.kdtree[index * 3 + 1];
-			p.b = pal.kdtree[index * 3 + 2];
-		} else {
-			p.r = pal.palette[index * 3];
-			p.g = pal.palette[index * 3 + 1];
-			p.b = pal.palette[index * 3 + 2];
-		}
+		p.r = color_source[index];
+		p.g = color_source[index + 1];
+		p.b = color_source[index + 2];
 		Color quant_err = quant_error(c, p);
+		// TODO: Remove this if condition and try a kernel data struct
 		if (d == FLOYD_STEINBERG) {
 			double w1 = 7.0 / 16;
 			double w2 = 5.0 / 16;

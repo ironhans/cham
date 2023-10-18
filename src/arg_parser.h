@@ -14,7 +14,7 @@
 const char *argp_program_version = "cham 0.1.0";
 
 // Argp setup
-char doc[] = "cham -- a dithering and image editing tool producing gifs";
+char doc[] = "cham -- a dithering and image editing tool for gifs";
 
 /* A description of the arguments we accept. */
 char args_doc[] = "<input file> -o <output file";
@@ -35,6 +35,16 @@ struct argp_option options[] = {
 	{"dither", 'd', "DITHER", OPTION_ARG_OPTIONAL,
 	 "The chosen dithering algorithm, default floyd. Avaliable: floyd.", 1},
 
+	{"width", 'w', "WIDTH", 0,
+	 "The width of the output. If height is not set it preserves the original "
+	 "ratio.",
+	 1},
+
+	{"height", 'h', "HEIGHT", 0,
+	 "The height of the output. If width is not set it preserves the original "
+	 "ratio.",
+	 1},
+
 	{"transparency", 't', 0, 0, "Retain transparency", 1},
 	{0}};
 
@@ -42,6 +52,8 @@ struct arguments {
 	char input_file[MAX_FILENAME_LEN];
 	char output_file[MAX_FILENAME_LEN];
 	uint depth;
+	int width;
+	int height;
 	bool retain_transparency;
 	DitherAlgorithm dither_algo;
 	Palette palette;
@@ -88,6 +100,14 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 						   arg);
 				argp_usage(state);
 			}
+			break;
+
+		case 'w':
+			args->width = strtol(arg, NULL, 10);
+			break;
+
+		case 'h':
+			args->height = strtol(arg, NULL, 10);
 			break;
 
 		case 'o':
