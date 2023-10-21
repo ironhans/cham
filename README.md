@@ -3,7 +3,7 @@ A cli image editing tool producing GIFs with color reduction and dithering.
 
 ## Build
 ```
-make
+make MODE=release
 ```
 Builds the release version of the binary, depends on the included [stb headers](https://github.com/nothings/stb)
 and [gifenc](https://github.com/lecram/gifenc).
@@ -38,16 +38,16 @@ cham <input file> [OPTS] -o <output file>
     to bit-depth value of 2^depth.
 
 --dither -d
-	Enables dither with the chosen dithering algorithm as the argument,
+    Enables dither with the chosen dithering algorithm as the argument,
     defaults to floyd.
     Avaliable Algorithms:
 
 --width -w
-	Resize image to the given width. If height is not set it preserves the
+    Resize image to the given width. If height is not set it preserves the
     original ratio.
 
 --height -h
-	Resize image to the given height. If width is not set it preserves the
+    Resize image to the given height. If width is not set it preserves the
     original ratio.
 ```
 
