@@ -101,11 +101,11 @@ uint8_t *cham_create_given_palette(Palette pal, unsigned char *img, int width,
 	uint8_t *pixels = malloc(sizeof(*pixels) * width * height);
 	int (*find_func)(Color, Palette) =
 		(pal.kdtree) ? &search_neighbor : &find_closest_color;
-	// if (pal.kdtree) {
-	// 	printf("KDTREE\n");
-	// } else {
-	// 	printf("LINEAR\n");
-	// }
+	if (pal.kdtree) {
+		printf("KDTREE\n");
+	} else {
+		printf("LINEAR\n");
+	}
 	for (int i = 0; i < width * height * channels; i += channels) {
 		Color c;
 		c.r = img[i];
@@ -186,12 +186,12 @@ void median_cut(unsigned char *img, ColorBucket *buckets, int curr_buckets,
 		if (buckets[i].size <= 3) {
 			continue;
 		}
-		// if (buckets[i].color_range != -1 &&
-		// 	buckets[i].color_range > curr_largest_range) {
-		// 	curr_largest_range = buckets[i].color_range;
-		// 	target_index = i;
-		// 	continue;
-		// }
+		if (buckets[i].color_range != -1 &&
+			buckets[i].color_range > curr_largest_range) {
+			curr_largest_range = buckets[i].color_range;
+			target_index = i;
+			continue;
+		}
 		int r_min = INT_MAX;
 		int g_min = INT_MAX;
 		int b_min = INT_MAX;
@@ -243,22 +243,22 @@ void median_cut(unsigned char *img, ColorBucket *buckets, int curr_buckets,
 	ColorBucket *target_bucket = &buckets[target_index];
 	switch (target_bucket->color) {
 		case 0:
-			qsort(&img[target_bucket->head], buckets->size / 3,
+			qsort(&img[target_bucket->head], target_bucket->size / 3,
 				  sizeof(*img) * 3, cmp_r);
 			break;
 		case 1:
-			qsort(&img[target_bucket->head], buckets->size / 3,
+			qsort(&img[target_bucket->head], target_bucket->size / 3,
 				  sizeof(*img) * 3, cmp_g);
 			break;
 		case 2:
-			qsort(&img[target_bucket->head], buckets->size / 3,
+			qsort(&img[target_bucket->head], target_bucket->size / 3,
 				  sizeof(*img) * 3, cmp_b);
 			break;
 	}
-	for (int i = 0; i < target_bucket->size; i += 3) {
+	// for (int i = 0; i < target_bucket->size; i += 3) {
 		// printf("COLOR: 0x%02x 0x%02x 0x%02x\n", img[i], img[i + 1], img[i +
 		// 2]);
-	}
+	// }
 	// printf("\n");
 	// printf("target BUCKET SIZE %d\n", target_bucket->size);
 	// printf("target BUCKET HEAD %d\n", target_bucket->head);
@@ -271,8 +271,6 @@ void median_cut(unsigned char *img, ColorBucket *buckets, int curr_buckets,
 
 	target_bucket->color_range = -1;
 	buckets[curr_buckets + 1].color_range = -1;
-	target_bucket->color = -1;
-	buckets[curr_buckets + 1].color = -1;
 	// printf("LEFT BUCKET SIZE %d\n", buckets[curr_buckets + 1].size);
 	// printf("LEFT BUCKET HEAD %d\n", buckets[curr_buckets + 1].head);
 	// printf("RIGHT BUCKET SIZE %d\n", target_bucket->size);
@@ -328,12 +326,11 @@ void generate_pal(unsigned char *img, int width, int height, int channels,
 		// generated_colors[3 * i + 1], generated_colors[3 * i  + 2]);
 	}
 	// free(img_clone);
-	// TODO: Maybe change to 32 or 20 idk
 	pal->size = kcolors;
 	pal->color_arr = generated_colors;
-	// if (kcolors > 16) {
-	// 	pal->kdtree = generated_colors;
-	// } else {
-	// 	pal->color_arr = build_kdtree;
-	// }
+	if (kcolors > 8) {
+		uint8_t *kdtree = malloc(sizeof(*kdtree) * kcolors * channels);
+		build_kdtree(generated_colors, 0, kdtree, kcolors, 0);
+		pal->kdtree = kdtree;
+	}
 }
