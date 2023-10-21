@@ -38,7 +38,9 @@ struct argp_option options[] = {
 	 1},
 
 	{"dither", 'd', "DITHER", OPTION_ARG_OPTIONAL,
-	 "The chosen dithering algorithm, default floyd. Avaliable: floyd.", 1},
+	 "Enables dither with the chosen dithering algorithm, default floyd. "
+	 "Avaliable: floyd.",
+	 1},
 
 	{"width", 'w', "WIDTH", 0,
 	 "The width of the output. If height is not set it preserves the original "
@@ -55,7 +57,6 @@ struct argp_option options[] = {
 
 struct arguments {
 	char input_file[MAX_FILENAME_LEN];
-	char output_file[MAX_FILENAME_LEN];
 	uint depth;
 	uint kcolors;
 	int width;
@@ -63,6 +64,7 @@ struct arguments {
 	bool retain_transparency;
 	DitherAlgorithm dither_algo;
 	Palette palette;
+	char output_file[MAX_FILENAME_LEN];
 };
 
 error_t parse_opt(int key, char *arg, struct argp_state *state)
@@ -141,17 +143,18 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 			break;
 
 		case 'o':
-			strncpy(args->output_file, arg, MAX_FILENAME_LEN);
+			strncpy(args->output_file, arg, MAX_FILENAME_LEN - 1);
 			break;
 
 		case ARGP_KEY_ARG:
 			if (state->arg_num == 0) {
-				strncpy(args->input_file, arg, MAX_FILENAME_LEN);
+				strncpy(args->input_file, arg, MAX_FILENAME_LEN - 1);
 			}
 			if (state->arg_num > 1) {
 				argp_usage(state);
 			}
 			break;
+
 		case ARGP_KEY_END:
 			if (state->arg_num < 1) {
 				argp_usage(state);

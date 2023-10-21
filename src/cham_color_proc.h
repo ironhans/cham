@@ -43,8 +43,10 @@ void set_color_error(unsigned char *img, int index, double weight, Color err);
 Color get_color_error(unsigned char *img, int index, double weight, Color err);
 void set_pixel_color(unsigned char *img, int index, Color c);
 
+// void median_cut(unsigned char *img, ColorBucket *buckets, int curr_buckets,
+// 				int kcolors);
 void median_cut(unsigned char *img, ColorBucket *buckets, int curr_buckets,
-				int kcolors);
+				int channels, int kcolors);
 void generate_pal(unsigned char *img, int width, int height, int channels,
 					 int kcolors, Palette *pal);
 

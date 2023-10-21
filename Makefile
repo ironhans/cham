@@ -1,9 +1,10 @@
 CC := gcc
 
+DBG_DIR := debug
+RLS_DIR := release
 SRC_DIR := src
 OBJ_DIR := obj
 BIN_DIR := bin
-OUT_DIR := output
 TEST_DIR := tests
 
 EXE := $(BIN_DIR)/cham
@@ -21,16 +22,16 @@ LDLIBS   := -lm
 
 .PHONY: all clean run-tests run-valgrind
 
-all: $(EXE) $(OUT_DIR)
+all: $(EXE)
 
 $(EXE): $(OBJ) | $(BIN_DIR)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 	mkdir -p `dirname $@`
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+	$(CC) $(CPPFLAGS) $(CFLAGS) -O2 -c $< -o $@
 
-$(BIN_DIR) $(OBJ_DIR) $(OUT_DIR):
+$(BIN_DIR) $(OBJ_DIR) $(DBG_DIR) $(RLS_DIR):
 	mkdir -p $@
 
 run-tests: $(TEST_EXE)
@@ -52,7 +53,6 @@ clean:
 	rm -rfv $(OBJ_DIR)
 	rm -rfv $(BIN_DIR)
 	rm -rfv $(VAL)
-	rm -rfv $(OUT_DIR)
 	rm -rfv "$(TEST_DIR)/test_file"
 
 -include $(OBJ:.o=.d)

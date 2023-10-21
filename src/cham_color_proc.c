@@ -93,11 +93,11 @@ uint8_t *cham_create_given_palette(Palette pal, unsigned char *img, int width,
 	uint8_t *pixels = malloc(sizeof(*pixels) * width * height);
 	int (*find_func)(Color, Palette) =
 		(pal.kdtree) ? &search_neighbor : &find_closest_color;
-	if (pal.kdtree) {
-		printf("KDTREE\n");
-	} else {
-		printf("LINEAR\n");
-	}
+	// if (pal.kdtree) {
+	// 	printf("KDTREE\n");
+	// } else {
+	// 	printf("LINEAR\n");
+	// }
 	for (int i = 0; i < width * height * channels; i += channels) {
 		Color c;
 		c.r = img[i];
@@ -167,7 +167,7 @@ uint8_t *cham_create_given_palette_d(Palette pal, unsigned char *img, int width,
 }
 
 void median_cut(unsigned char *img, ColorBucket *buckets, int curr_buckets,
-				int kcolors)
+				int channels, int kcolors)
 {
 	if (curr_buckets + 1 == kcolors) {
 		return;
@@ -175,7 +175,7 @@ void median_cut(unsigned char *img, ColorBucket *buckets, int curr_buckets,
 	int target_index = 0;
 	int curr_largest_range = -1;
 	for (int i = 0; i <= curr_buckets; i++) {
-		if (buckets[i].size <= 3) {
+		if (buckets[i].size <= 1) {
 			continue;
 		}
 		if (buckets[i].color_range != -1 &&
@@ -190,8 +190,10 @@ void median_cut(unsigned char *img, ColorBucket *buckets, int curr_buckets,
 		int r_max = -1;
 		int g_max = -1;
 		int b_max = -1;
-		for (int j = buckets[i].head; j < buckets[i].head + buckets[i].size;
-			 j += 3) {
+		for (int j = channels * buckets[i].head;
+			 j < channels * (buckets[i].head + buckets[i].size);
+			 j += channels) {
+			// printf("j: %d\n", j);
 			if (img[j] > r_max) {
 				r_max = img[j];
 			}
@@ -235,16 +237,16 @@ void median_cut(unsigned char *img, ColorBucket *buckets, int curr_buckets,
 	ColorBucket *target_bucket = &buckets[target_index];
 	switch (target_bucket->color) {
 		case 0:
-			qsort(&img[target_bucket->head], target_bucket->size / 3,
-				  sizeof(*img) * 3, cmp_r);
+			qsort(&img[target_bucket->head * channels], target_bucket->size,
+				  sizeof(*img) * channels, cmp_r);
 			break;
 		case 1:
-			qsort(&img[target_bucket->head], target_bucket->size / 3,
-				  sizeof(*img) * 3, cmp_g);
+			qsort(&img[target_bucket->head * channels], target_bucket->size,
+				  sizeof(*img) * channels, cmp_g);
 			break;
 		case 2:
-			qsort(&img[target_bucket->head], target_bucket->size / 3,
-				  sizeof(*img) * 3, cmp_b);
+			qsort(&img[target_bucket->head * channels], target_bucket->size,
+				  sizeof(*img) * channels, cmp_b);
 			break;
 	}
 	int end = target_bucket->head + target_bucket->size;
@@ -256,23 +258,24 @@ void median_cut(unsigned char *img, ColorBucket *buckets, int curr_buckets,
 
 	target_bucket->color_range = -1;
 	buckets[curr_buckets + 1].color_range = -1;
-	median_cut(img, buckets, curr_buckets + 1, kcolors);
+	median_cut(img, buckets, curr_buckets + 1, channels, kcolors);
 }
 
-inline static Color mean(unsigned char *img, ColorBucket *bucket)
+inline static Color mean(unsigned char *img, ColorBucket *bucket, int ch)
 {
 	Color c;
 	c.r = 0;
 	c.g = 0;
 	c.b = 0;
-	for (int i = bucket->head; i < bucket->head + bucket->size; i += 3) {
+	for (int i = ch * bucket->head; i < ch * (bucket->head + bucket->size);
+		 i += ch) {
 		c.r += img[i];
 		c.g += img[i + 1];
 		c.b += img[i + 2];
 	}
-	c.r /= bucket->size / 3;
-	c.g /= bucket->size / 3;
-	c.b /= bucket->size / 3;
+	c.r /= bucket->size;
+	c.g /= bucket->size;
+	c.b /= bucket->size;
 	return c;
 }
 
@@ -284,14 +287,14 @@ void generate_pal(unsigned char *img, int width, int height, int channels,
 	memcpy(img_clone, img, sizeof(*img) * whc);
 	ColorBucket *buckets = malloc(sizeof(*buckets) * kcolors);
 	buckets[0].head = 0;
-	buckets[0].size = whc;
+	buckets[0].size = width * height;
 	buckets[0].color = -1;
 	buckets[0].color_range = -1;
-	median_cut(img_clone, buckets, 0, kcolors);
+	median_cut(img_clone, buckets, 0, STBI_rgb, kcolors);
 	uint8_t *generated_colors =
 		malloc(sizeof(*generated_colors) * kcolors * channels);
 	for (int i = 0; i < kcolors; i++) {
-		Color c = mean(img_clone, &buckets[i]);
+		Color c = mean(img_clone, &buckets[i], STBI_rgb);
 		generated_colors[3 * i] = c.r;
 		generated_colors[3 * i + 1] = c.g;
 		generated_colors[3 * i + 2] = c.b;

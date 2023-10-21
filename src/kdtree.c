@@ -72,7 +72,7 @@ static void search_recursive(Color o, Palette p, int i, int depth, KDTree_Return
 		best->dist = curr.dist;
 		best->ind = curr.ind;
 	}
-	double dist_axis;
+	double dist_axis = INT_MAX;
 	switch (axis) {
 		case 0:
 			dist_axis = root_color.r - o.r;
