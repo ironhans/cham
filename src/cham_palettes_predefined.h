@@ -25,7 +25,6 @@ typedef struct {
 	uint8_t *kdtree;
 } Palette;
 
-
 extern Palette CUSTOM;
 
 extern uint8_t bw_palette[];

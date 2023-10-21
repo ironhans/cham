@@ -11,7 +11,7 @@ SRC := $(shell find src -name '*.c')
 OBJ := $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 
 TEST_EXE := $(BIN_DIR)/run-tests
-TEST_SRC := $(filter-out src/main.c, $(SRC) $(wildcard $(TEST_DIR)/*.c))
+TEST_SRC := $(filter-out src/$(EXE).c, $(SRC) $(wildcard $(TEST_DIR)/*.c))
 VAL := $(wildcard $(TEST_DIR)/valgrind-out.txt*)
 
 CPPFLAGS := -I/home/$(USER)/.local/include -MMD -MP

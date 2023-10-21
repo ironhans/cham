@@ -3,6 +3,9 @@
 // predefined color palettes
 // Defaults for depth
 
+// Custom placeholder
+Palette CUSTOM = {0, 0, 0};
+
 // BW palette
 Palette BW = {2, bw_palette, 0};
 uint8_t bw_palette[] = {

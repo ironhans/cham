@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "cham_palettes_predefined.h"
 #include "kdtree.h"
@@ -26,6 +27,23 @@ inline double sq_distance_between_colors(Color x, Color y)
 	int g_diff = y.g - x.g;
 	int b_diff = y.b - x.b;
 	return sqrt((r_diff * r_diff) + (g_diff * g_diff) + (b_diff * b_diff));
+}
+
+inline int cmp_r(const void *a, const void *b)
+{
+	return (((int)*(uint8_t *)a) - ((int)*(uint8_t *)b));
+}
+inline int cmp_g(const void *a, const void *b)
+{
+	int x = (int)*(((uint8_t *)a) + 1);
+	int y = (int)*(((uint8_t *)b) + 1);
+	return x - y;
+}
+inline int cmp_b(const void *a, const void *b)
+{
+	int x = (int)*(((uint8_t *)a) + 2);
+	int y = (int)*(((uint8_t *)b) + 2);
+	return x - y;
 }
 
 int find_closest_color(Color original, Palette p)
@@ -58,7 +76,8 @@ inline Color quant_error(Color old_color, Color new_color)
 	return t;
 }
 
-inline void set_color_error(unsigned char *img, int index, double weight, Color err)
+inline void set_color_error(unsigned char *img, int index, double weight,
+							Color err)
 {
 	PLUS_TRUNCATE_UCHAR(img[index], weight * err.r);
 	PLUS_TRUNCATE_UCHAR(img[index + 1], weight * err.g);
@@ -105,7 +124,7 @@ uint8_t *cham_create_given_palette_d(Palette pal, unsigned char *img, int width,
 		return NULL;
 	}
 	uint8_t *pixels = malloc(sizeof(*pixels) * width * height);
-	uint8_t *color_source; 
+	uint8_t *color_source;
 	int (*find_func)(Color, Palette);
 	if (pal.kdtree) {
 		find_func = &search_neighbor;
@@ -155,22 +174,166 @@ uint8_t *cham_create_given_palette_d(Palette pal, unsigned char *img, int width,
 	return pixels;
 }
 
-uint8_t *cham_create_input_palette_kcolors(unsigned char *img, int kcolors,
-										   int width, int height, int channels)
+void median_cut(unsigned char *img, ColorBucket *buckets, int curr_buckets,
+				int kcolors)
 {
-	if (channels == 4) {
-		return NULL;
+	if (curr_buckets + 1 == kcolors) {
+		return;
 	}
-	UNUSED(kcolors);
-	Color *pixels = malloc(sizeof(*pixels) * width * height);
-	int count = 0;
-	for (int i = 0; i < width * height * channels; i += channels) {
-		pixels[count].r = img[i];
-		pixels[count].g = img[i + 1];
-		pixels[count].b = img[i + 2];
-		count++;
+	int target_index = 0;
+	int curr_largest_range = -1;
+	for (int i = 0; i <= curr_buckets; i++) {
+		if (buckets[i].size <= 3) {
+			continue;
+		}
+		// if (buckets[i].color_range != -1 &&
+		// 	buckets[i].color_range > curr_largest_range) {
+		// 	curr_largest_range = buckets[i].color_range;
+		// 	target_index = i;
+		// 	continue;
+		// }
+		int r_min = INT_MAX;
+		int g_min = INT_MAX;
+		int b_min = INT_MAX;
+		int r_max = -1;
+		int g_max = -1;
+		int b_max = -1;
+		for (int j = buckets[i].head; j < buckets[i].head + buckets[i].size;
+			 j += 3) {
+			if (img[j] > r_max) {
+				r_max = img[j];
+			}
+			if (img[j] < r_min) {
+				r_min = img[j];
+			}
+			if (img[j + 1] > g_max) {
+				g_max = img[j + 1];
+			}
+			if (img[j + 1] < g_min) {
+				g_min = img[j + 1];
+			}
+			if (img[j + 2] > b_max) {
+				b_max = img[j + 2];
+			}
+			if (img[j + 2] < b_min) {
+				b_min = img[j + 2];
+			}
+		}
+		int r_range = r_max - r_min;
+		int g_range = g_max - g_min;
+		int b_range = b_max - b_min;
+		int max_range;
+		// TODO: maybe change the order of range detection to G -> R -> B
+		if (r_range > g_range && r_range && b_range) {
+			max_range = r_range;
+			buckets[i].color = 0;
+		} else if (g_range > r_range && g_range > b_range) {
+			max_range = g_range;
+			buckets[i].color = 1;
+		} else {
+			max_range = b_range;
+			buckets[i].color = 2;
+		}
+		buckets[i].color_range = max_range;
+		if (curr_largest_range < max_range) {
+			target_index = i;
+			curr_largest_range = max_range;
+		}
 	}
-	// uint8_t num_colors = ceil(sqrt(kcolors));
-	uint8_t *result = malloc(sizeof(*result) * width * height);
-	return result;
+	ColorBucket *target_bucket = &buckets[target_index];
+	switch (target_bucket->color) {
+		case 0:
+			qsort(&img[target_bucket->head], buckets->size / 3,
+				  sizeof(*img) * 3, cmp_r);
+			break;
+		case 1:
+			qsort(&img[target_bucket->head], buckets->size / 3,
+				  sizeof(*img) * 3, cmp_g);
+			break;
+		case 2:
+			qsort(&img[target_bucket->head], buckets->size / 3,
+				  sizeof(*img) * 3, cmp_b);
+			break;
+	}
+	for (int i = 0; i < target_bucket->size; i += 3) {
+		// printf("COLOR: 0x%02x 0x%02x 0x%02x\n", img[i], img[i + 1], img[i +
+		// 2]);
+	}
+	// printf("\n");
+	// printf("target BUCKET SIZE %d\n", target_bucket->size);
+	// printf("target BUCKET HEAD %d\n", target_bucket->head);
+	int end = target_bucket->head + target_bucket->size;
+	int org_size = target_bucket->size;
+	buckets[curr_buckets + 1].head = target_bucket->head;
+	buckets[curr_buckets + 1].size = org_size / 2;
+	target_bucket->head += buckets[curr_buckets + 1].size;
+	target_bucket->size = end - target_bucket->head;
+
+	target_bucket->color_range = -1;
+	buckets[curr_buckets + 1].color_range = -1;
+	target_bucket->color = -1;
+	buckets[curr_buckets + 1].color = -1;
+	// printf("LEFT BUCKET SIZE %d\n", buckets[curr_buckets + 1].size);
+	// printf("LEFT BUCKET HEAD %d\n", buckets[curr_buckets + 1].head);
+	// printf("RIGHT BUCKET SIZE %d\n", target_bucket->size);
+	// printf("RIGHT BUCKET HEAD %d\n", target_bucket->head);
+	median_cut(img, buckets, curr_buckets + 1, kcolors);
+}
+
+inline static Color mean(unsigned char *img, ColorBucket *bucket)
+{
+	Color c;
+	c.r = 0;
+	c.g = 0;
+	c.b = 0;
+	// printf("E BUCKET SIZE %d\n", bucket->size + bucket->head);
+	// printf("E BUCKET HEAD %d\n", bucket->head);
+	for (int i = bucket->head; i < bucket->head + bucket->size; i += 3) {
+		// printf("I %d COLOR: %d %d %d\n", i /3, img[i], img[i + 1], img[i +
+		// 2]);
+		c.r += img[i];
+		c.g += img[i + 1];
+		c.b += img[i + 2];
+	}
+	c.r /= bucket->size / 3;
+	c.g /= bucket->size / 3;
+	c.b /= bucket->size / 3;
+	// printf("MEAN: %d %d %d\n", c.r, c.g, c.b);
+	return c;
+}
+
+void generate_pal(unsigned char *img, int width, int height, int channels,
+				  int kcolors, Palette *pal)
+{
+	// printf("KColors %d\n", kcolors);
+	int whc = width * height * channels;
+	unsigned char *img_clone = malloc(sizeof(*img) * whc);
+	memcpy(img_clone, img, sizeof(*img) * whc);
+	ColorBucket *buckets = malloc(sizeof(*buckets) * kcolors);
+	buckets[0].head = 0;
+	buckets[0].size = whc;
+	buckets[0].color = -1;
+	buckets[0].color_range = -1;
+	// printf("BUCKET SIZE %d\n", buckets[0].size);
+	// printf("BUCKET HEAD %d\n", buckets[0].head);
+	median_cut(img_clone, buckets, 0, kcolors);
+	uint8_t *generated_colors =
+		malloc(sizeof(*generated_colors) * kcolors * channels);
+	for (int i = 0; i < kcolors; i++) {
+		Color c = mean(img_clone, &buckets[i]);
+		generated_colors[3 * i] = c.r;
+		generated_colors[3 * i + 1] = c.g;
+		generated_colors[3 * i + 2] = c.b;
+		// printf("COLOR: %d %d %d\n", generated_colors[3 * i],
+		// generated_colors[3 * i + 1], generated_colors[3 * i  + 2]);
+	}
+	// free(img_clone);
+	// TODO: Maybe change to 32 or 20 idk
+	pal->size = kcolors;
+	pal->color_arr = generated_colors;
+	// if (kcolors > 16) {
+	// 	pal->kdtree = generated_colors;
+	// } else {
+	// 	pal->color_arr = build_kdtree;
+	// }
 }

@@ -29,7 +29,12 @@ struct argp_option options[] = {
 
 	{"bit-depth", 'b', "BIT-DEPTH", 0,
 	 "The bit color depth of the generated palette, if not used default value "
-	 "3",
+	 "3. If k arg is used, it takes priority",
+	 1},
+
+	{"k-colors", 'k', "K-COLORS", 0,
+	 "The number of colors present in the generated palette, if not used "
+	 "defaults to bit-depth value of 2^depth",
 	 1},
 
 	{"dither", 'd', "DITHER", OPTION_ARG_OPTIONAL,
@@ -52,6 +57,7 @@ struct arguments {
 	char input_file[MAX_FILENAME_LEN];
 	char output_file[MAX_FILENAME_LEN];
 	uint depth;
+	uint kcolors;
 	int width;
 	int height;
 	bool retain_transparency;
@@ -87,6 +93,30 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 
 		case 'b':
 			args->depth = strtol(arg, NULL, 10);
+			if (args->depth > 8) {
+				argp_error(state, "Bit depth  %d is too large, max value 8.\n",
+						   args->depth);
+				argp_usage(state);
+			}
+			if (args->depth < 1) {
+				argp_error(state, "Bit depth  %d is too small, min value 1.\n",
+						   args->depth);
+				argp_usage(state);
+			}
+			break;
+
+		case 'k':
+			args->kcolors = strtol(arg, NULL, 10);
+			if (args->kcolors > 256) {
+				argp_error(state, "K-Color %d is too large, max value 256.\n",
+						   args->kcolors);
+				argp_usage(state);
+			}
+			if (args->kcolors < 1) {
+				argp_error(state, "Bit depth  %d is too small, min value 1.\n",
+						   args->kcolors);
+				argp_usage(state);
+			}
 			break;
 
 		case 'd':

@@ -8,23 +8,6 @@
 
 #include "cham_color_proc.h"
 
-static int cmp_r(const void *a, const void *b)
-{
-	return (((int)*(uint8_t *)a) - ((int)*(uint8_t *)b));
-}
-static int cmp_g(const void *a, const void *b)
-{
-	int x = (int)*(((uint8_t *)a) + 1);
-	int y = (int)*(((uint8_t *)b) + 1);
-	return x - y;
-}
-static int cmp_b(const void *a, const void *b)
-{
-	int x = (int)*(((uint8_t *)a) + 2);
-	int y = (int)*(((uint8_t *)b) + 2);
-	return x - y;
-}
-
 Color build_kdtree(uint8_t *pal, int depth, uint8_t *kdtree, int size, int ind)
 {
 	int axis = depth % 3;

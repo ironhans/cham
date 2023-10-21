@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "arg_parser.h"
 #include "cham_color_proc.h"
@@ -19,10 +20,12 @@ int main(int argc, char *argv[])
 
 	/* Default values. */
 	args.depth = 3;
+	args.kcolors = 0;
 	args.retain_transparency = false;
 	args.dither_algo = NONE;
 	args.output_file[0] = 0;
-	args.palette = SIX_EIGHT_FIVE;	// TODO: Change to be CUSTOM
+	// args.palette = SIX_EIGHT_FIVE;	// TODO: Change to be CUSTOM
+	args.palette = CUSTOM;	// TODO: Change to be CUSTOM
 	args.width = 0;
 	args.height = 0;
 
@@ -31,16 +34,27 @@ int main(int argc, char *argv[])
 		args.output_file[strlen(args.output_file) - 1] == '/') {
 		strncat(args.output_file, args.input_file,
 				MAX_FILENAME_LEN - strlen(args.output_file));
+		// TODO: Fix this later but whatever
+		unsigned long before = strlen(args.output_file);
 		dirname(args.output_file);
-		strncat(args.output_file, "/cham_", 7);
+		if (strlen(args.output_file) == before) {
+			args.output_file[0] = 0;
+			strncat(args.output_file, "cham_", 7);
+		} else {
+			strncat(args.output_file, "/cham_", 7);
+		}
 		strncat(args.output_file, basename(args.input_file),
 				MAX_FILENAME_LEN - strlen(args.output_file));
 		char *ext = strrchr(args.output_file, '.');
 		strncpy(ext, ".gif", 5);
 	}
+	if (args.kcolors == 0) {
+		args.kcolors = 2 << args.depth;
+	}
 	printf("%d\n", argc);
 	printf("input name %s\n", args.input_file);
 	printf("bit depth %d\n", args.depth);
+	printf("k colors %d\n", args.kcolors);
 	printf("dither_algo %d\n", args.dither_algo);
 	printf("output name %s\n", args.output_file);
 	printf("width %d\n", args.width);
@@ -78,18 +92,27 @@ int main(int argc, char *argv[])
 		height = args.height;
 	}
 
+	// Custom palette handling
+	if (args.palette.size == 0) {
+		generate_pal(img, width, height, STBIR_RGB, args.kcolors, &args.palette);
+	}
+
+	int gif_depth = (int)ceil(log2(args.palette.size));
+	if (gif_depth < 1) {
+		gif_depth = 1;
+	}
+
 	ge_GIF *gif_handler;
 	if (args.palette.kdtree) {
 	gif_handler =
 		ge_new_gif(args.output_file, width, height, args.palette.kdtree,
-				   (int)ceil(log2(args.palette.size)), -1, -1);
+				   gif_depth, -1, -1);
 	} else {
 	gif_handler =
 		ge_new_gif(args.output_file, width, height, args.palette.color_arr,
-				   (int)ceil(log2(args.palette.size)), -1, -1);
+				   gif_depth, -1, -1);
 	}
 	uint8_t *pixels;
-	// User given palettes
 	if (args.dither_algo > 0) {
 		pixels = cham_create_given_palette_d(args.palette, img, width, height,
 											 STBI_rgb, args.dither_algo);
