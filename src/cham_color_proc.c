@@ -217,13 +217,12 @@ void median_cut(unsigned char *img, ColorBucket *buckets, int curr_buckets,
 		int g_range = g_max - g_min;
 		int b_range = b_max - b_min;
 		int max_range;
-		// TODO: maybe change the order of range detection to G -> R -> B
-		if (r_range > g_range && r_range && b_range) {
-			max_range = r_range;
-			buckets[i].color = 0;
-		} else if (g_range > r_range && g_range > b_range) {
+		if (g_range >= r_range && g_range >= b_range) {
 			max_range = g_range;
 			buckets[i].color = 1;
+		} else if (r_range >= g_range && r_range >= b_range) {
+			max_range = r_range;
+			buckets[i].color = 0;
 		} else {
 			max_range = b_range;
 			buckets[i].color = 2;
@@ -302,8 +301,11 @@ void generate_pal(unsigned char *img, int width, int height, int channels,
 	pal->size = kcolors;
 	pal->color_arr = generated_colors;
 	if (kcolors > 8) {
-		uint8_t *kdtree = malloc(sizeof(*kdtree) * kcolors * channels);
+		int x = ceil(log2(kcolors));
+		uint8_t *kdtree = calloc((1 << x) * channels, sizeof(*kdtree));
 		build_kdtree(generated_colors, 0, kdtree, kcolors, 0);
 		pal->kdtree = kdtree;
+		pal->size = (1 << x);  // NOTE: Bandage fix, no way to properly null
+							   // check for kdtree
 	}
 }

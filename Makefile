@@ -28,8 +28,6 @@ VAL := $(wildcard $(TEST_DIR)/valgrind-out.txt*)
 .PHONY: all clean run-tests run-valgrind
 
 all: $(EXE)
-	echo ${OBJ}
-	echo ${OBJ_DIR}
 
 $(EXE): $(OBJ) | $(BIN_DIR)
 	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@

@@ -11,7 +11,7 @@
 Color build_kdtree(uint8_t *pal, int depth, uint8_t *kdtree, int size, int ind)
 {
 	int axis = depth % 3;
-	if (size <= 1) {
+	if (size == 1) {
 		Color c;
 		c.r = *pal;
 		c.g = *(pal + 1);
@@ -37,8 +37,8 @@ Color build_kdtree(uint8_t *pal, int depth, uint8_t *kdtree, int size, int ind)
 	kdtree[ind] = median.r;
 	kdtree[ind + 1] = median.g;
 	kdtree[ind + 2] = median.b;
-	int left_size = (mid / 3);
-	int right_size = size - (mid / 3) - 1;
+	int left_size = size / 2;
+	int right_size = size - (size / 2) - 1;
 	if (left_size >= 1) {
 		int l_ind = 2 * ind + 3;
 		Color l = build_kdtree(pal, depth + 1, kdtree, left_size, l_ind);
