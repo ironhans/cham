@@ -76,25 +76,27 @@ int main(int argc, char *argv[])
 	}
 	printf("%d x %d x %d\n", width, height, channels);
 	// return EXIT_SUCCESS;
-	
+
 	if (args.width || args.height) {
-		if (args.width && !args.height){
-			double ratio = (double) args.width / width;
+		if (args.width && !args.height) {
+			double ratio = (double)args.width / width;
 			args.height = ratio * height;
 			printf("NEW %d x %d\n", args.width, args.height);
 		} else if (args.height && !args.width) {
-			double ratio = (double) args.height / height;
+			double ratio = (double)args.height / height;
 			args.width = ratio * width;
 			printf("NEW %d x %d\n", args.width, args.height);
 		}
-		img = stbir_resize_uint8_srgb(img, width, height, 0, 0, args.width, args.height, 0, STBIR_RGB);
+		img = stbir_resize_uint8_srgb(img, width, height, 0, 0, args.width,
+									  args.height, 0, STBIR_RGB);
 		width = args.width;
 		height = args.height;
 	}
 
 	// Custom palette handling
 	if (args.palette.size == 0) {
-		generate_pal(img, width, height, STBIR_RGB, args.kcolors, &args.palette);
+		generate_pal(img, width, height, STBIR_RGB, args.kcolors,
+					 &args.palette);
 	}
 
 	int gif_depth = (int)ceil(log2(args.palette.size));
@@ -104,13 +106,11 @@ int main(int argc, char *argv[])
 
 	ge_GIF *gif_handler;
 	if (args.palette.kdtree) {
-	gif_handler =
-		ge_new_gif(args.output_file, width, height, args.palette.kdtree,
-				   gif_depth, -1, -1);
+		gif_handler = ge_new_gif(args.output_file, width, height,
+								 args.palette.kdtree, gif_depth, -1, -1);
 	} else {
-	gif_handler =
-		ge_new_gif(args.output_file, width, height, args.palette.color_arr,
-				   gif_depth, -1, -1);
+		gif_handler = ge_new_gif(args.output_file, width, height,
+								 args.palette.color_arr, gif_depth, -1, -1);
 	}
 	uint8_t *pixels;
 	if (args.dither_algo > 0) {

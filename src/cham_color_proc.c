@@ -162,6 +162,35 @@ uint8_t *cham_create_given_palette_d(Palette pal, unsigned char *img, int width,
 				}
 			}
 		}
+		if (d == ATKINSON) {
+			double w = 1.0 / 8;
+			int x = GET_X(i, channels, width);
+			int y = GET_Y(i, channels, width);
+			if (x + 2 < width) {
+				set_color_error(img, GET_IND(x + 2, y, channels, width), w,
+								quant_err);
+			}
+			if (x + 1 < width) {
+				set_color_error(img, GET_IND(x + 1, y, channels, width), w,
+								quant_err);
+			}
+			if (y + 2 < height) {
+				set_color_error(img, GET_IND(x, y + 2, channels, width), w,
+								quant_err);
+			}
+			if (y + 1 < height) {
+				set_color_error(img, GET_IND(x, y + 1, channels, width), w,
+								quant_err);
+				if (x > 0) {
+					set_color_error(img, GET_IND(x - 1, y + 1, channels, width),
+									w, quant_err);
+				}
+				if (x + 1 < width) {
+					set_color_error(img, GET_IND(x + 1, y + 1, channels, width),
+									w, quant_err);
+				}
+			}
+		}
 	}
 	return pixels;
 }

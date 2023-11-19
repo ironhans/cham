@@ -6,3 +6,4 @@ goals/
 bin/
 output/
 obj/
+debug/

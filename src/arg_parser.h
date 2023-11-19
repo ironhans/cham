@@ -122,13 +122,21 @@ error_t parse_opt(int key, char *arg, struct argp_state *state)
 			break;
 
 		case 'd':
+			if (arg != NULL) {
+				for (int i = 0; arg[i]; i++) {
+					arg[i] = tolower(arg[i]);
+				}
+			}
 			if (arg == NULL || strcmp("floyd", arg) == 0 ||
 				strcmp("floydsteinberg", arg) == 0) {
 				args->dither_algo = FLOYD_STEINBERG;
+			} else if (strcmp("atkin", arg) == 0 ||
+					   strcmp("atkinson", arg) == 0) {
+				args->dither_algo = ATKINSON;
 			} else {
 				argp_error(state,
 						   "Unknown value %s for dithering algorithm.\n"
-						   "Valid algorithms are floyd, placeholder.",
+						   "Valid algorithms are floyd, atkinson.",
 						   arg);
 				argp_usage(state);
 			}

@@ -19,6 +19,7 @@
 typedef enum {
 	NONE,
 	FLOYD_STEINBERG,
+	ATKINSON,
 } DitherAlgorithm;
 
 typedef struct {
